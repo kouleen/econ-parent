@@ -19,10 +19,10 @@
     <description>Econ parent project, relying on version management in a unified way.</description>
     <url>https://github.com/kouleen/econ-parent</url>
     <!-- 部署快照仓库用这个版本： -->
-<!--    <version>1.0.0-SNAPSHOT</version>-->
+    <version>1.0.0-SNAPSHOT</version>
 
     <!-- 部署正式仓库用这个版本： -->
-        <version>1.0.0</version>
+<!--        <version>1.0.0</version>-->
     <packaging>pom</packaging>
 
     <!--开源协议...-->
@@ -240,19 +240,19 @@
                         <version>0.7.0</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <publishingServerId>snapshot</publishingServerId>
+                            <publishingServerId>release</publishingServerId>
                         </configuration>
                     </plugin>
+                    <!-- 升级nexus-staging插件到兼容版本 -->
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-release-plugin</artifactId>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.7.0</version>
+                        <extensions>true</extensions>
                         <configuration>
-                            <autoVersionSubmodules>true</autoVersionSubmodules>
-                            <useReleaseProfile>false</useReleaseProfile>
-                            <releaseProfiles>snapshot</releaseProfiles>
-                            <goals>deploy</goals>
-                            <tagNameFormat>v@{project.version}</tagNameFormat>
-                            <commitByProject>true</commitByProject>
+                            <serverId>snapshot</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
+                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -262,7 +262,7 @@
         <profile>
             <id>release</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <build>
                 <plugins>
@@ -273,7 +273,17 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>release</publishingServerId>
-                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.7.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>release</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -282,10 +292,8 @@
                         <configuration>
                             <autoVersionSubmodules>true</autoVersionSubmodules>
                             <useReleaseProfile>false</useReleaseProfile>
-                            <releaseProfiles>release</releaseProfiles>
+                            <releaseProfiles>deploy-release</releaseProfiles>
                             <goals>deploy</goals>
-                            <tagNameFormat>v@{project.version}</tagNameFormat>
-                            <commitByProject>true</commitByProject>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -304,27 +312,6 @@
 
         <!-- pom打包无需finalName，删除gateway避免混淆 -->
         <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring-boot.version}</version>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- 核心部署插件统一配置，避免重复 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -543,7 +530,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>1.5</version>
                     <executions>
                         <execution>
                             <id>sign-artifacts</id>
@@ -559,6 +546,17 @@
     </build>
 
     <repositories>
+        <repository>
+            <name>snapshot</name>
+            <id>snapshot</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
         <!-- 阿里云仓库 -->
         <repository>
             <id>aliyun</id>
@@ -577,7 +575,7 @@
         <snapshotRepository>
             <!--注意,此id必须与setting.xml中指定的一致-->
             <id>snapshot</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>release</id>
