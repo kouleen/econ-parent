@@ -1,0 +1,116 @@
+name: Publish Artifacts
+
+# 触发条件：push 到 release 分支自动执行，也支持 Actions 页面手动触发
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+# 推 git tag 需要 contents:write；发布 GitHub Packages 需要 packages:write
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 打 tag 需要完整历史与 tag 引用
+          fetch-depth: 0
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      # 统一生成 settings.xml，三套凭据的 id 必须与 pom.xml 中的 server id 完全一致：
+      # github  -> GitHub Packages（GITHUB_TOKEN 由 Actions 自动提供）
+      # snapshot/release -> Central Portal 快照与正式端点，共用同一套 User Token
+      - name: Configure Maven credentials
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${GITHUB_ACTOR}</username>
+                <password>${GITHUB_TOKEN}</password>
+              </server>
+              <server>
+                <id>snapshot</id>
+                <username>${CENTRAL_PORTAL_USERNAME}</username>
+                <password>${CENTRAL_PORTAL_TOKEN}</password>
+              </server>
+              <server>
+                <id>release</id>
+                <username>${CENTRAL_PORTAL_USERNAME}</username>
+                <password>${CENTRAL_PORTAL_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_TOKEN: ${{ secrets.CENTRAL_PORTAL_TOKEN }}
+
+      # 从 pom.xml 提取版本号并判断类型，后续步骤按 is_snapshot 分流
+      - name: Detect project version
+        id: ver
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Project version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-SNAPSHOT ]]; then
+            echo "is_snapshot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_snapshot=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 仅纯数字 release 版本导入 GPG 私钥；SNAPSHOT 不签名，无需密钥
+      - name: Import GPG key
+        if: steps.ver.outputs.is_snapshot == 'false'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      # 仅 release 自动打 v版本号 tag 并推送；tag 已存在时跳过避免失败
+      - name: Create and push release tag
+        if: steps.ver.outputs.is_snapshot == 'false'
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
+            echo "Tag $TAG already exists on remote, skipping tag creation"
+          else
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
+
+      # SNAPSHOT：central-publishing 插件自动路由到 Central Portal 快照仓库，不校验不签名
+      - name: Deploy SNAPSHOT to Maven Central snapshot repository
+        if: steps.ver.outputs.is_snapshot == 'true'
+        run: mvn clean deploy -DskipTests
+
+      # release：-Ppublish 激活 GPG 签名，central-publishing 插件走 Portal 校验并自动发布
+      - name: Deploy RELEASE to Maven Central
+        if: steps.ver.outputs.is_snapshot == 'false'
+        run: mvn clean deploy -Ppublish -DskipTests
+        env:
+          # maven-gpg-plugin 自动识别该环境变量作为私钥 passphrase
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      # 两种版本都同步到 GitHub Packages；-Pgithub 覆盖 distributionManagement，
+      # 具体走 repository 还是 snapshotRepository 仍由 Maven 按版本后缀自动选择
+      - name: Deploy to GitHub Packages
+        run: mvn deploy -Pgithub -DskipTests

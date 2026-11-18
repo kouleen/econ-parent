@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
-        <relativePath/>
+        <version>3.5.16</version>
+        <relativePath />
     </parent>
 
     <groupId>io.github.kouleen.econ</groupId>
@@ -22,7 +22,7 @@
     <version>1.0.0-SNAPSHOT</version>
 
     <!-- 部署正式仓库用这个版本： -->
-<!--        <version>1.0.0</version>-->
+    <!-- <version>1.0.0</version> -->
     <packaging>pom</packaging>
 
     <!--开源协议...-->
@@ -57,28 +57,42 @@
         <!-- 工具类版本 -->
         <commons-pool2.version>2.12.0</commons-pool2.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <lombok.version>1.18.36</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
 
         <!-- 中间件版本 -->
-        <dubbo.version>3.2.15</dubbo.version>
-        <mybatis-plus.version>3.5.12</mybatis-plus.version>
-        <dynamic-datasource.version>4.3.0</dynamic-datasource.version>
+        <dubbo.version>3.3.7</dubbo.version>
+        <mybatis-plus.version>3.5.18.1</mybatis-plus.version>
+        <dynamic-datasource.version>4.6.0</dynamic-datasource.version>
 
         <!-- 核心框架版本 -->
-        <spring-boot.version>4.0.5</spring-boot.version>
-        <spring-cloud-alibaba.version>2025.1.0.0</spring-cloud-alibaba.version>
-        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
+        <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
+        <spring-cloud.version>2025.0.3</spring-cloud.version>
+
+        <!-- 构建插件版本 -->
+        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.4.1</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.4</maven-gpg-plugin.version>
+        <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
+        <central-publishing-plugin.version>0.7.0</central-publishing-plugin.version>
+
+        <!-- GitHub Packages 坐标（owner 必须全小写，即使 GitHub 用户名含大写） -->
+        <github.owner>kouleen</github.owner>
+        <github.repo>econ-parent</github.repo>
 
         <!-- 基础环境 -->
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- 发布开关：快照发布时用 -Dgpg.skip=true 跳过签名（快照不需要签名） -->
+        <gpg.skip>false</gpg.skip>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-
             <!-- Spring Cloud 依赖 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -97,30 +111,33 @@
                 <scope>import</scope>
             </dependency>
 
-
-
             <!-- 核心业务依赖 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>${commons-pool2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>dynamic-datasource-spring-boot3-starter</artifactId>
+                <version>${dynamic-datasource.version}</version>
+            </dependency>
+
+            <!-- Dubbo -->
             <dependency>
                 <groupId>org.apache.dubbo</groupId>
                 <artifactId>dubbo-spring-boot-starter</artifactId>
                 <version>${dubbo.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
-                <version>${mybatis-plus.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.baomidou</groupId>
-                <artifactId>dynamic-datasource-spring-boot-starter</artifactId>
-                <version>${dynamic-datasource.version}</version>
-            </dependency>
-
-            <!-- 连接池-->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-pool2</artifactId>
-                <version>${commons-pool2.version}</version>
+                <groupId>org.apache.dubbo</groupId>
+                <artifactId>dubbo</artifactId>
+                <version>${dubbo.version}</version>
             </dependency>
 
             <!-- Bean复制依赖 -->
@@ -166,6 +183,7 @@
         </dependency>
     </dependencies>
 
+    <!-- ========================= 环境 profile ========================= -->
     <profiles>
         <profile>
             <id>dev</id>
@@ -174,148 +192,136 @@
             </activation>
             <properties>
                 <profiles.active>dev</profiles.active>
-                <maven.test.skip>true</maven.test.skip>
+                <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
 
         <profile>
             <id>test</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <properties>
                 <profiles.active>test</profiles.active>
-                <maven.test.skip>true</maven.test.skip>
-                <maven.compile.fork>true</maven.compile.fork>
+                <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
 
         <profile>
             <id>uat</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <properties>
                 <profiles.active>uat</profiles.active>
-                <maven.test.skip>true</maven.test.skip>
-                <maven.compile.fork>true</maven.compile.fork>
+                <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
 
         <profile>
             <id>pre</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <properties>
                 <profiles.active>pre</profiles.active>
-                <maven.test.skip>true</maven.test.skip>
-                <maven.compile.fork>true</maven.compile.fork>
+                <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
 
         <profile>
             <id>prod</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <properties>
                 <profiles.active>prod</profiles.active>
-                <maven.test.skip>true</maven.test.skip>
-                <maven.compile.fork>true</maven.compile.fork>
+                <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
 
-        <!-- 单独的部署profile，避免和环境profile混淆 -->
+        <!-- ================= 签名 profile（release 版本专用，由 CI 按版本自动激活） =================
+             用法：mvn clean deploy -Ppublish（仅纯数字版本需要，SNAPSHOT 不要带此 profile）
+             激活后执行 GPG 签名；Central 发布由常驻的 central-publishing-maven-plugin 自动完成。
+             前提：settings.xml 中 <server id="release"> 配好 Central Portal User Token，
+                   且运行环境已导入 GPG 私钥（passphrase 通过环境变量 GPG_PASSPHRASE 传入） -->
         <profile>
-            <id>snapshot</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
+            <id>publish</id>
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.7.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>release</publishingServerId>
-                        </configuration>
-                    </plugin>
-                    <!-- 升级nexus-staging插件到兼容版本 -->
-                    <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.7.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <serverId>snapshot</serverId>
-                            <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>release</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.7.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>release</publishingServerId>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.7.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <serverId>release</serverId>
-                            <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                        </configuration>
-                    </plugin>
+                    <!-- 正式版必须签名：mvn deploy -Ppublish 时执行 -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-release-plugin</artifactId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                         <configuration>
-                            <autoVersionSubmodules>true</autoVersionSubmodules>
-                            <useReleaseProfile>false</useReleaseProfile>
-                            <releaseProfiles>deploy-release</releaseProfiles>
-                            <goals>deploy</goals>
+                            <skip>${gpg.skip}</skip>
+                            <!-- 非交互环境（CI）下必须 loopback，否则会卡在输入密码 -->
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
         </profile>
 
+        <!-- ================= GitHub Packages 发布 profile（按需激活） =================
+             用法：mvn clean deploy -Pgithub
+             激活后本 profile 的 distributionManagement 会整体覆盖顶层 Central Portal 配置，
+             快照与正式版都推送到 GitHub Packages（该 registry 支持 SNAPSHOT）。
+             注意：不要与 publish profile 同时使用；GitHub Packages 不要求 GPG 签名。
+             凭据：settings.xml 中配置 <server id="github">，密码为 PAT(classic)，需 write:packages 权限 -->
+        <profile>
+            <id>github</id>
+            <distributionManagement>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub Packages Releases</name>
+                    <url>https://maven.pkg.github.com/${github.owner}/${github.repo}</url>
+                </repository>
+                <snapshotRepository>
+                    <id>github</id>
+                    <name>GitHub Packages Snapshots</name>
+                    <url>https://maven.pkg.github.com/${github.owner}/${github.repo}</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
     </profiles>
 
     <build>
+        <!-- 资源过滤：
+             子模块 application.yml 里的 @profiles.active@ 由这里替换（spring-boot-starter-parent 的默认分隔符是 @）
+             注意 1：二进制文件必须排除，否则会被当文本过滤导致损坏
+             注意 2：不要在 yml 里写 ${...}（Maven 只认 @...@，且 ${} 会被二次解析搞坏） -->
         <resources>
             <resource>
-                <filtering>true</filtering>
                 <directory>${basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>**/*.p12</exclude>
+                    <exclude>**/*.jks</exclude>
+                    <exclude>**/*.keystore</exclude>
+                    <exclude>**/*.png</exclude>
+                    <exclude>**/*.jpg</exclude>
+                    <exclude>**/*.jpeg</exclude>
+                    <exclude>**/*.gif</exclude>
+                    <exclude>**/*.ico</exclude>
+                    <exclude>**/*.zip</exclude>
+                    <exclude>**/*.gz</exclude>
+                    <exclude>**/*.pdf</exclude>
+                    <exclude>**/*.xlsx</exclude>
+                    <exclude>**/*.xls</exclude>
+                    <exclude>**/*.docx</exclude>
+                    <exclude>**/*.doc</exclude>
+                </excludes>
             </resource>
         </resources>
 
-        <!-- pom打包无需finalName，删除gateway避免混淆 -->
         <plugins>
-            <!-- 核心部署插件统一配置，避免重复 -->
+            <!-- 源码包：Central 发布必需 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
+                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -326,9 +332,11 @@
                 </executions>
             </plugin>
 
+            <!-- 文档包：Central 发布必需 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven-javadoc-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -337,37 +345,65 @@
                         </goals>
                     </execution>
                 </executions>
-                <!-- 解决中文注释乱码 -->
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <charset>UTF-8</charset>
                     <docencoding>UTF-8</docencoding>
-                    <!-- 忽略javadoc警告 -->
+                    <!-- 忽略 javadoc 警告，避免因 doclint 报错导致发布中断 -->
                     <additionalOptions>-Xdoclint:none</additionalOptions>
+                    <doclint>none</doclint>
                 </configuration>
             </plugin>
 
+            <!-- 编译 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <executable>${gpg.executable}</executable>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <encoding>UTF-8</encoding>
+                    <parameters>true</parameters>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Central Portal 发布插件（常驻，无需 profile 激活）：
+                 0.7.0+ 原生按版本自动路由——
+                 -SNAPSHOT 版本：直传 distributionManagement 的 snapshotRepository，不做校验、无需签名；
+                 纯数字 release：打包 bundle 上传 Portal 校验并按 autoPublish 自动发布。
+                 凭据取 settings.xml 中 id=release 的 User Token；snapshot 与 release 端点共用同一套 Token -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>${central-publishing-plugin.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <!-- 对应 settings.xml 中 <server id="release"> -->
+                    <publishingServerId>release</publishingServerId>
+                    <!-- true=校验通过后自动发布；想人工确认改成 false，然后到 Portal 页面点 Publish -->
+                    <autoPublish>true</autoPublish>
+                    <!-- 阻塞等待发布完成，避免 CI 提前判定成功 -->
+                    <waitUntil>published</waitUntil>
                 </configuration>
             </plugin>
         </plugins>
 
         <pluginManagement>
             <plugins>
-                <!--  springboot启动包-->
+                <!-- Spring Boot 启动包 -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
@@ -388,11 +424,12 @@
                         </execution>
                     </executions>
                 </plugin>
-                <!-- 依赖包assembly-->
+
+                <!-- assembly 打包 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.7.1</version>
                     <configuration>
                         <appendAssemblyId>false</appendAssemblyId>
                         <descriptorRefs>
@@ -403,37 +440,18 @@
                         <execution>
                             <id>make-assembly</id>
                             <phase>package</phase>
+                            <goals>
+                                <goal>single</goal>
+                            </goals>
                         </execution>
                     </executions>
                 </plugin>
-                <!-- 编译包-->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.1</version>
-                    <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
-                        <encoding>UTF-8</encoding>
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                                <version>${lombok.version}</version>
-                            </path>
-                            <path>
-                                <groupId>org.mapstruct</groupId>
-                                <artifactId>mapstruct-processor</artifactId>
-                                <version>${mapstruct.version}</version>
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
-                </plugin>
-                <!--  依赖包shade-->
+
+                <!-- shade 打包 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.4</version>
+                    <version>3.6.2</version>
                     <executions>
                         <execution>
                             <phase>package</phase>
@@ -446,109 +464,42 @@
                         </execution>
                     </executions>
                 </plugin>
-                <!-- 源代码包插件-->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-source-plugin</artifactId>
-                    <version>3.2.1</version>
-                    <executions>
-                        <execution>
-                            <id>attach-sources</id>
-                            <goals>
-                                <goal>jar-no-fork</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <!-- 文档doc插件 -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.4.1</version>
-                    <executions>
-                        <execution>
-                            <id>attach-javadocs</id>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <!--  Docker插件-->
-                <plugin>
-                    <groupId>com.spotify</groupId>
-                    <artifactId>docker-maven-plugin</artifactId>
-                    <version>1.0.0</version>
-                    <configuration>
-                        <imageName>${project.build.finalName}</imageName>
-                        <dockerDirectory>${basedir}</dockerDirectory> <!-- 指定 Dockerfile 路径-->
-                        <!-- 这里是复制 jar 包到 docker 容器指定目录配置，也可以写到 Docokerfile 中 -->
-                        <resources>
-                            <resource>
-                                <targetPath>/work</targetPath>
-                                <directory>${project.build.directory}</directory>
-                                <include>${project.build.finalName}.jar</include>
-                            </resource>
-                        </resources>
-                    </configuration>
-                </plugin>
-                <!-- ClassFinal加密 -->
-                <plugin>
-                    <groupId>net.roseboy</groupId>
-                    <artifactId>classfinal-maven-plugin</artifactId>
-                    <version>1.2.1</version>
-                    <configuration>
-                        <!-- 可采用机器码的方式绑定机器 需要提前获得机器码写入code -->
-                        <!--<code></code> -->
-                        <!-- 密码为#可以直接用javaagent启动 也可以设置其他密码 dockerFile脚本中需要标注=“-pwd 123456” -->
-                        <password>#</password>
-                        <!-- 所需要加密的包路径 -->
-                        <packages>io.github.kouleen.live</packages>
-                        <excludes>org.spring</excludes>
-                        <!-- 所需要加密配置文件 -->
-                        <cfgfiles>
-                            Dockerfile,
-                            javabuild.sh,
-                            application.yml
-                        </cfgfiles>
-                        <!--要进行加密的依赖jar包 -->
-                        <libjars>
-                            <!--  live-api-1.0.0.jar-->
-                        </libjars>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>classFinal</goal>
-                            </goals>
-                        </execution>
-                    </executions>
 
-                </plugin>
-                <!--gpg插件-->
+                <!-- 正式版发布流程插件（可选，主要用于一键改版本+打 tag） -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-gpg-plugin</artifactId>
-                    <version>1.5</version>
-                    <executions>
-                        <execution>
-                            <id>sign-artifacts</id>
-                            <phase>verify</phase>
-                            <goals>
-                                <goal>sign</goal>
-                            </goals>
-                        </execution>
-                    </executions>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>${maven-release-plugin.version}</version>
+                    <configuration>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
+                        <useReleaseProfile>false</useReleaseProfile>
+                        <releaseProfiles>publish</releaseProfiles>
+                        <goals>deploy</goals>
+                        <tagNameFormat>v@{project.version}</tagNameFormat>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
     <repositories>
+        <!-- 阿里云公共仓库（代理 Maven Central） -->
         <repository>
-            <name>snapshot</name>
+            <id>aliyun</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+
+        <!-- 本项目自己的快照仓库（Central Portal） -->
+        <repository>
             <id>snapshot</id>
+            <name>Central Portal Snapshots</name>
             <url>https://central.sonatype.com/repository/maven-snapshots/</url>
             <releases>
                 <enabled>false</enabled>
@@ -557,29 +508,48 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-        <!-- 阿里云仓库 -->
+
+        <!-- GitHub Packages（拉取本项目或私有仓库发布的构件；凭据见 settings.xml 的 id=github，PAT 需 read:packages） -->
         <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/${github.owner}/${github.repo}</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
             <id>aliyun</id>
-            <name>Aliyun Repository</name>
             <url>https://maven.aliyun.com/repository/public</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
             <snapshots>
-                <enabled>false</enabled> <!-- 关闭快照版本下载（可选） -->
+                <enabled>false</enabled>
             </snapshots>
-        </repository>
-    </repositories>
+        </pluginRepository>
+    </pluginRepositories>
 
+    <!-- ========================= 部署地址（统一 Central Portal） =========================
+         snapshotRepository：推快照，配合 version 必须以 -SNAPSHOT 结尾
+         repository        ：推正式版，配合 version 必须不带 -SNAPSHOT
+         两者的 id 必须与 settings.xml 里 <server> 的 id 完全一致 -->
     <distributionManagement>
         <snapshotRepository>
-            <!--注意,此id必须与setting.xml中指定的一致-->
             <id>snapshot</id>
+            <name>Central Portal Snapshots</name>
             <url>https://central.sonatype.com/repository/maven-snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>release</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <name>Central Portal Releases</name>
+            <url>https://central.sonatype.com/repository/maven-releases/</url>
         </repository>
     </distributionManagement>
 </project>
