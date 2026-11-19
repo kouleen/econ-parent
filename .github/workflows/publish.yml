@@ -63,6 +63,30 @@ jobs:
           CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
           CENTRAL_PORTAL_TOKEN: ${{ secrets.CENTRAL_PORTAL_TOKEN }}
 
+      # 诊断 Central Portal 401：输出 Secret 结构指纹（不打印明文）并直接探测快照端点，
+      # 用服务端响应体区分「Secret 录入错误」与「命名空间未 Enable SNAPSHOTs」
+      - name: Diagnose Central Portal snapshot access
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_TOKEN: ${{ secrets.CENTRAL_PORTAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "== Secret 结构指纹（明文不输出，GitHub 自动打码）=="
+          echo "username: 长度=${#CENTRAL_PORTAL_USERNAME} 首=[${CENTRAL_PORTAL_USERNAME:0:1}] 尾=[${CENTRAL_PORTAL_USERNAME: -1}]"
+          echo "token:    长度=${#CENTRAL_PORTAL_TOKEN} 首=[${CENTRAL_PORTAL_TOKEN:0:1}] 尾=[${CENTRAL_PORTAL_TOKEN: -1}]"
+          if [[ "$CENTRAL_PORTAL_USERNAME" =~ [[:space:]] || "$CENTRAL_PORTAL_TOKEN" =~ [[:space:]] ]]; then
+            echo "::error::Secret 含空白字符（换行/空格），必然 401，请删除后重新录入"
+            exit 1
+          fi
+          echo "== 绕开 Maven 直接探测 snapshot 端点，验证凭据与命名空间权限 =="
+          CODE=$(curl -sS -o /tmp/central_resp.txt -w "%{http_code}" \
+            -u "$CENTRAL_PORTAL_USERNAME:$CENTRAL_PORTAL_TOKEN" \
+            -X PUT --data-binary "diagnostic" \
+            "https://central.sonatype.com/repository/maven-snapshots/io/github/kouleen/econ/econ-parent/1.0.0-SNAPSHOT/diagnostic-$(date +%s).tmp")
+          echo "HTTP status: $CODE"
+          echo "--- 服务端响应体 ---"
+          cat /tmp/central_resp.txt
+
       # 从 pom.xml 提取版本号并判断类型，后续步骤按 is_snapshot 分流
       - name: Detect project version
         id: ver
