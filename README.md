@@ -67,6 +67,7 @@ Econ parent project, relying on version management in a unified way.
 - 工作流自动从 pom.xml 提取版本号并分流：
   - SNAPSHOT：部署 Central Portal 快照仓库 + GitHub Packages，不打 tag、不签名
   - 纯数字 release：先自动创建并推送 `v版本号` git tag（已存在则跳过），再 GPG 签名发布 Maven Central，最后同步 GitHub Packages
+- 前置条件：首次发布 SNAPSHOT 前，必须登录 Central Portal → Publishing → Namespaces，对目标命名空间执行 **Enable SNAPSHOTs**（命名空间卡片出现 SNAPSHOT 徽标即生效），否则快照写入会被服务端拒绝
 - 需要在仓库 Settings → Secrets and variables → Actions 中配置以下 secrets：
 
 | Secret 名                  | 用途                                                                     |
